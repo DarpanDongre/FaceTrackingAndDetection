@@ -1,0 +1,7 @@
+Flask>=3.0.0
+opencv-python>=4.8.0
+pyserial>=3.5
+ultralytics>=8.0.0
+sounddevice>=0.4.6
+vosk>=0.3.45
+psutil>=5.9.0
