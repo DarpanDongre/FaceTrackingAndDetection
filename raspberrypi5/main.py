@@ -361,7 +361,7 @@ def status():
     with dash_lock:
         return jsonify(dict(dash_state))
 
-# ── DASHBOARD HTML (finalised design, now driven by /status instead of Math.random) ──
+# ── DASHBOARD HTML ──
 DASHBOARD_HTML = r"""
 <!DOCTYPE html>
 <html lang="en">
@@ -369,28 +369,136 @@ DASHBOARD_HTML = r"""
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Firebird V - Stealth Command</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        nexaBlack: '#000000',
-                        nexaDark: '#080808',
-                        nexaBorder: '#2a2a2a',
-                        nexaText: '#e0e0e0',
-                        nexaMuted: '#b5b5b5',
-                        nexaHighlight: '#ffffff'
-                    },
-                    fontFamily: {
-                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', 'monospace']
-                    }
-                }
-            }
-        }
-    </script>
     <style>
-        body { background-color: #000; }
+        /* ── offline replacement for the Tailwind CDN utility classes used below ──
+           No external requests — everything the dashboard needs is defined here
+           so it works with zero internet connection. Values match the original
+           Tailwind config 1:1 (colors, spacing, font sizes etc.) */
+
+        * { box-sizing: border-box; }
+
+        html, body { margin: 0; padding: 0; }
+
+        body {
+            background-color: #000;
+            color: #e0e0e0;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            padding: 0.75rem;
+            display: flex;
+            gap: 0.75rem;
+            -webkit-user-select: none;
+            user-select: none;
+            letter-spacing: -0.025em;
+        }
+
+        /* layout utilities */
+        .flex { display: flex; }
+        .flex-1 { flex: 1 1 0%; }
+        .flex-col { flex-direction: column; }
+        .items-center { align-items: center; }
+        .items-start { align-items: flex-start; }
+        .items-end { align-items: flex-end; }
+        .justify-between { justify-content: space-between; }
+        .justify-center { justify-content: center; }
+        .relative { position: relative; }
+        .absolute { position: absolute; }
+        .inset-0 { top: 0; right: 0; bottom: 0; left: 0; }
+        .top-0 { top: 0; }
+        .left-0 { left: 0; }
+        .bottom-0 { bottom: 0; }
+        .overflow-hidden { overflow: hidden; }
+        .overflow-y-auto { overflow-y: auto; }
+        .pointer-events-none { pointer-events: none; }
+
+        /* sizing */
+        .h-full { height: 100%; }
+        .w-full { width: 100%; }
+        .w-62 { width: 62%; }
+        .w-38 { width: 38%; }
+        .w-4 { width: 1rem; }
+        .h-4 { height: 1rem; }
+        .w-1-5 { width: 0.375rem; }
+        .h-1-5 { height: 0.375rem; }
+        .w-12 { width: 3rem; }
+        .h-1 { height: 0.25rem; }
+
+        /* spacing */
+        .p-4 { padding: 1rem; }
+        .p-5 { padding: 1.25rem; }
+        .gap-3 { gap: 0.75rem; }
+        .gap-2 { gap: 0.5rem; }
+        .gap-1 { gap: 0.25rem; }
+        .gap-4 { gap: 1rem; }
+        .mt-4 { margin-top: 1rem; }
+        .mt-2 { margin-top: 0.5rem; }
+        .mb-1 { margin-bottom: 0.25rem; }
+        .mb-2 { margin-bottom: 0.5rem; }
+        .mb-3 { margin-bottom: 0.75rem; }
+        .pb-2 { padding-bottom: 0.5rem; }
+        .pr-2 { padding-right: 0.5rem; }
+        .px-2 { padding-left: 0.5rem; padding-right: 0.5rem; }
+        .py-0-5 { padding-top: 0.125rem; padding-bottom: 0.125rem; }
+
+        /* typography */
+        .text-xl { font-size: 1.25rem; line-height: 1.75rem; }
+        .text-2xl { font-size: 1.5rem; line-height: 2rem; }
+        .text-base { font-size: 1rem; line-height: 1.5rem; }
+        .text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+        .text-11 { font-size: 11px; }
+        .text-12 { font-size: 12px; }
+        .text-10 { font-size: 10px; }
+        .text-8 { font-size: 8px; }
+        .text-huge { font-size: 4.8rem; }
+        .text-cmd { font-size: 2.25rem; }
+        .leading-none { line-height: 1; }
+        .leading-relaxed { line-height: 1.625; }
+        .font-bold { font-weight: 700; }
+        .font-light { font-weight: 300; }
+        .uppercase { text-transform: uppercase; }
+        .tracking-wider { letter-spacing: 0.05em; }
+        .tracking-widest { letter-spacing: 0.1em; }
+        .tracking-tight { letter-spacing: -0.025em; }
+        .tracking-tighter { letter-spacing: -0.05em; }
+        .tracking-title { letter-spacing: 0.2em; }
+        .tracking-cmd { letter-spacing: 0.1em; }
+        .text-right { text-align: right; }
+
+        /* colors */
+        .text-white { color: #fff; }
+        .text-nexaText { color: #e0e0e0; }
+        .text-nexaMuted { color: #b5b5b5; }
+        .text-nexaHighlight { color: #ffffff; }
+        .text-nexaBlack { color: #000000; }
+
+        .bg-white { background-color: #fff; }
+        .bg-nexaHighlight { background-color: #ffffff; }
+        .bg-nexaBorder { background-color: #2a2a2a; }
+        .bg-feed { background-color: #0a0a0a; }
+
+        .border { border-width: 1px; border-style: solid; border-color: #b5b5b5; }
+        .border-b { border-bottom-width: 1px; border-bottom-style: solid; }
+        .border-t { border-top-width: 1px; border-top-style: solid; }
+        .border-dashed { border-style: dashed; }
+        .border-nexaBorder { border-color: #2a2a2a; }
+        .border-nexaMuted { border-color: #b5b5b5; }
+        .border-white-20 { border-color: rgba(255,255,255,0.2); }
+
+        .rounded-full { border-radius: 9999px; }
+
+        .object-cover { object-fit: cover; }
+
+        .z-10 { z-index: 10; }
+        .z-20 { z-index: 20; }
+
+        .mix-blend-difference { mix-blend-mode: difference; }
+
+        .transition-colors { transition-property: color, background-color, border-color; }
+        .duration-300 { transition-duration: 300ms; }
+
+        /* ── original custom styles (unchanged) ── */
 
         .bracket-panel {
             position: relative;
@@ -454,18 +562,18 @@ DASHBOARD_HTML = r"""
         .offline-dot { background: #c1503a !important; }
     </style>
 </head>
-<body class="text-nexaText font-mono h-screen w-screen overflow-hidden p-3 flex gap-3 select-none tracking-tight">
+<body>
 
     <!-- LEFT SIDE: LIVE VIDEO FEED -->
-    <div class="w-[62%] h-full bracket-panel relative overflow-hidden flex flex-col">
+    <div class="w-62 h-full bracket-panel relative overflow-hidden flex flex-col">
         <div class="bracket-inner absolute inset-0 pointer-events-none z-10"></div>
 
         <div class="absolute top-0 left-0 w-full p-4 flex justify-between items-start z-20 mix-blend-difference text-white">
-            <div class="text-xl font-bold tracking-[0.2em]">FIREBIRD V</div>
+            <div class="text-xl font-bold tracking-title">FIREBIRD V</div>
             <div class="flex-1"></div>
         </div>
 
-        <div class="relative w-full h-full bg-[#0a0a0a]">
+        <div class="relative w-full h-full bg-feed">
             <img
                 src="/video_feed"
                 class="absolute inset-0 w-full h-full object-cover"
@@ -477,41 +585,41 @@ DASHBOARD_HTML = r"""
             <div class="center-dot"></div>
         </div>
 
-        <div class="absolute bottom-0 left-0 w-full p-4 flex justify-between items-end z-20 mix-blend-difference text-white text-[11px]">
+        <div class="absolute bottom-0 left-0 w-full p-4 flex justify-between items-end z-20 mix-blend-difference text-white text-11">
             <div class="tracking-wider">YOLOv8N-FACE VISION</div>
             <div class="flex items-center gap-2">
-                <div class="w-1.5 h-1.5 bg-white blinking rounded-full" id="live-dot"></div>
+                <div class="w-1-5 h-1-5 bg-white blinking rounded-full" id="live-dot"></div>
                 LIVE FEED
             </div>
         </div>
     </div>
 
     <!-- RIGHT SIDE: TELEMETRY DASHBOARD -->
-    <div class="w-[38%] h-full flex flex-col gap-3">
+    <div class="w-38 h-full flex flex-col gap-3">
 
         <!-- WIDGET 1: AI VISION MODULE -->
         <div class="bracket-panel flex-1 p-5 flex flex-col justify-between">
             <div class="bracket-inner absolute inset-0 pointer-events-none"></div>
 
             <div class="flex justify-between items-center border-b border-nexaBorder pb-2">
-                <span class="text-[12px] text-nexaMuted uppercase tracking-widest">AI Vision State</span>
-                <div class="w-4 h-4 border border-nexaMuted flex items-center justify-center text-[8px] text-nexaMuted">V</div>
+                <span class="text-12 text-nexaMuted uppercase tracking-widest">AI Vision State</span>
+                <div class="w-4 h-4 border border-nexaMuted flex items-center justify-center text-8 text-nexaMuted">V</div>
             </div>
 
             <div class="flex flex-col mt-4">
-                <div class="text-[11px] text-nexaMuted uppercase mb-1">Status</div>
+                <div class="text-11 text-nexaMuted uppercase mb-1">Status</div>
                 <div class="text-base text-nexaHighlight" id="lock-status">SEARCHING...</div>
             </div>
 
             <div class="flex justify-between items-end mt-4">
                 <div>
-                    <div class="text-[11px] text-nexaMuted uppercase mb-1">Confidence</div>
-                    <div class="text-[4.8rem] leading-none font-light text-nexaHighlight tracking-tighter" id="conf-val">
+                    <div class="text-11 text-nexaMuted uppercase mb-1">Confidence</div>
+                    <div class="text-huge leading-none font-light text-nexaHighlight tracking-tighter" id="conf-val">
                         --<span class="text-2xl text-nexaMuted">%</span>
                     </div>
                 </div>
                 <div class="text-right">
-                    <div class="text-[11px] text-nexaMuted uppercase mb-1">Offset Error</div>
+                    <div class="text-11 text-nexaMuted uppercase mb-1">Offset Error</div>
                     <div class="text-2xl text-nexaHighlight tracking-tight" id="error-val">
                         0<span class="text-sm text-nexaMuted">px</span>
                     </div>
@@ -524,13 +632,13 @@ DASHBOARD_HTML = r"""
             <div class="bracket-inner absolute inset-0 pointer-events-none"></div>
 
             <div class="flex justify-between items-center border-b border-nexaBorder pb-2">
-                <span class="text-[12px] text-nexaMuted uppercase tracking-widest">Kinematics Uplink</span>
-                <div class="w-4 h-4 border border-nexaMuted flex items-center justify-center text-[8px] text-nexaMuted">K</div>
+                <span class="text-12 text-nexaMuted uppercase tracking-widest">Kinematics Uplink</span>
+                <div class="w-4 h-4 border border-nexaMuted flex items-center justify-center text-8 text-nexaMuted">K</div>
             </div>
 
             <div class="flex flex-col justify-center items-center h-full mt-2">
-                <div class="text-[11px] text-nexaMuted uppercase mb-2">Current Pi Command</div>
-                <div class="text-[2.25rem] font-light tracking-[0.1em] text-nexaHighlight" id="motor-cmd">STOP</div>
+                <div class="text-11 text-nexaMuted uppercase mb-2">Current Pi Command</div>
+                <div class="text-cmd font-light tracking-cmd text-nexaHighlight" id="motor-cmd">STOP</div>
 
                 <div class="mt-4 flex gap-1">
                     <div class="w-12 h-1 bg-nexaBorder transition-colors duration-300" id="vec-l"></div>
@@ -545,8 +653,8 @@ DASHBOARD_HTML = r"""
             <div class="bracket-inner absolute inset-0 pointer-events-none"></div>
 
             <div class="flex justify-between items-center border-b border-nexaBorder pb-2">
-                <span class="text-[12px] text-nexaMuted uppercase tracking-widest">System Diagnostics</span>
-                <div class="w-4 h-4 border border-nexaMuted flex items-center justify-center text-[8px] text-nexaMuted">S</div>
+                <span class="text-12 text-nexaMuted uppercase tracking-widest">System Diagnostics</span>
+                <div class="w-4 h-4 border border-nexaMuted flex items-center justify-center text-8 text-nexaMuted">S</div>
             </div>
 
             <div class="flex flex-col gap-4 mt-4 h-full justify-center">
@@ -576,11 +684,11 @@ DASHBOARD_HTML = r"""
             <div class="bracket-inner absolute inset-0 pointer-events-none"></div>
 
             <div class="flex justify-between items-center border-b border-nexaBorder pb-2 mb-3">
-                <span class="text-[12px] text-nexaMuted uppercase tracking-widest">Acoustic Terminal</span>
-                <span class="text-[10px] text-nexaBlack bg-nexaHighlight px-2 py-0.5 border border-white/20 uppercase font-bold" id="mic-status">--</span>
+                <span class="text-12 text-nexaMuted uppercase tracking-widest">Acoustic Terminal</span>
+                <span class="text-10 text-nexaBlack bg-nexaHighlight px-2 py-0-5 border border-white-20 uppercase font-bold" id="mic-status">--</span>
             </div>
 
-            <div class="flex-1 overflow-y-auto text-[12px] leading-relaxed font-mono flex flex-col gap-1 pr-2" id="terminal"></div>
+            <div class="flex-1 overflow-y-auto text-12 leading-relaxed font-mono flex flex-col gap-1 pr-2" id="terminal"></div>
         </div>
 
     </div>
@@ -644,7 +752,7 @@ DASHBOARD_HTML = r"""
                 if (d.terminal && d.terminal.length !== lastTermCount) {
                     termEl.innerHTML = d.terminal.map(line => {
                         if (line.type === "override") {
-                            return `<div class="text-nexaBlack bg-nexaHighlight px-2 py-0.5 w-fit mt-1 mb-1 font-bold tracking-wider">${line.text}</div>`;
+                            return `<div class="text-nexaBlack bg-nexaHighlight px-2 py-0-5" style="width:fit-content; margin-top:0.25rem; margin-bottom:0.25rem; font-weight:700; letter-spacing:0.05em;">${line.text}</div>`;
                         } else if (line.type === "heard") {
                             return `<div class="text-nexaHighlight">${line.text}</div>`;
                         }
@@ -722,7 +830,9 @@ def main():
             confidence = None
 
             if target_box is None:
-                if lost_counter < 60:
+                # 3-Second grace period logic: 90 frames @ 30 FPS.
+                # Stop instantly if the previous command was 'F'.
+                if lost_counter < 90 and momentum_cmd != 'F':
                     cmd = momentum_cmd
                     lost_counter += 1
                 else:
@@ -747,8 +857,6 @@ def main():
             if target_box is not None:
                 tx1, ty1, tx2, ty2 = target_box[:4]
                 cv2.rectangle(frame, (tx1, ty1), (tx2, ty2), (0, 0, 255), 2)
-
-            # center/tolerance debug lines removed — offset error is shown live in the dashboard panel instead
 
             with latest_frame_lock:
                 latest_frame = frame.copy()
